@@ -1,0 +1,12 @@
+,text,condition_vol,EC,Effort
+0,Vous regardez un ciel ensoleillé,light,0.42,-0.67
+1,Vous regardez une pièce complètement sombre,dark,-0.1,0.04
+2,Vous regardez un ciel nuageux,dark,0.0,-0.67
+3,Vous regardez un ciel nocturne,dark,0.0,-0.89
+4,Le visage de votre mère en plein soleil,light,0.49,-0.47
+5,Le visage de votre mère dans la pénombre,dark,0.0,0.12
+6,Vous regardez une pièce complètement éclairée,light,0.54,-0.53
+7,Votre main en plein soleil,light,0.49,-0.62
+8,Votre main dans l’obscurité,dark,0.0,-0.09
+9,Vous fixez un écran de cinéma totalement blanc,light,0.0,-0.59
+10,Vous fixez un écran de cinéma totalement noir,dark,0.0,-0.45

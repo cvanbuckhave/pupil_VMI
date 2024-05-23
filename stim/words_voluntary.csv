@@ -1,0 +1,12 @@
+text,condition_vol
+Vous regardez un ciel ensoleillé,light
+Vous regardez une pièce complètement sombre,dark
+Vous regardez un ciel nuageux,dark
+Vous regardez un ciel nocturne,dark
+Le visage de votre mère en plein soleil,light
+Le visage de votre mère dans la pénombre,dark
+Vous regardez une pièce complètement éclairée,light
+Votre main en plein soleil,light
+Votre main dans l’obscurité,dark
+Vous fixez un écran de cinéma totalement blanc,light
+Vous fixez un écran de cinéma totalement noir,dark

@@ -1,0 +1,11 @@
+correct_response_train,word_train,condition_train
+None,chère,ctrl
+None,collecte,ctrl
+None,malade,ctrl
+None,léger,ctrl
+None,joyeux,ctrl
+None,inégalé,ctrl
+None,reflet,light
+None,rincer,ctrl
+space,pigeon,animal
+space,cheval,animal
