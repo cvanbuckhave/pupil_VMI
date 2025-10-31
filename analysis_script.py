@@ -3,9 +3,12 @@
 Created on Fri Feb 17 18:20:51 2023
 
 @author: cvanbuck
+https://github.com/cvanbuckhave/pupil_VMI
+
+Note : Do not run with 'Run file', but section by section ('Run cell').
 """
 # =============================================================================
-# Set up 
+#%% Set up 
 # =============================================================================
 # Import packages
 ###################################
@@ -16,7 +19,7 @@ import matplotlib as mpl
 import pandas as pd
 import os 
 from datamatrix import series as srs, operations as ops, NAN
-from extra.specfunctions import ( get_data,
+from specfunctions import ( get_data,
                                dm_involuntary,
                                dm_voluntary,
                                plot_bars,
@@ -25,7 +28,8 @@ from extra.specfunctions import ( get_data,
                                check_assumptions,
                                word_summary,
                                test_correlation,
-                               group_dm )
+                               group_dm,
+                               compare_models)
 
 import pingouin as pg # to compute Cronbach's alpha
 import seaborn as sns
@@ -42,25 +46,26 @@ np.random.seed(111)  # Fix random seed for predictable outcomes
 
 ######################## begin part to modify
 cwd = os.getcwd() # automatic
-cwd='C:/Users/cvanb/Documents/pupilometry-main/' # manual
+cwd='D:/data_experiments/pupilometry-main_revised/' # manual
 folder = 'pupil_data/data' # folder with all data
-folder0, folder1 ='pupil_data/data_invol', 'pupil_data/data_vol' # separated folders by task
+folder0, folder1 ='pupil_data_/data_invol', 'pupil_data_/data_vol' # separated folders by task
 questfile = '/quest_data/results-survey.csv'
 outputfolder= cwd+'output/'
 ######################## end part to modify
 
 # =============================================================================
-# Preprocessing
+#%% Preprocessing
 # =============================================================================
 # Parsing data 
 # Get dm (experiments) 
     # if all data in one file/folder
 dm1_A, dm2_A = get_data(cwd, folder, split=True) # involuntary & voluntary
-    # if data in separate folders/files:
-dm1_B = get_data(cwd, folder0, split=False) # involuntary
-dm2_B = get_data(cwd, folder1, split=False) # voluntary
 
-# Index the trials and blocks to see possible impact of time 
+    # if data in separate folders/files:
+dm1_B = get_data(cwd, folder0, split=False) # Involuntary task
+dm2_B = get_data(cwd, folder1, split=False) # Voluntary task
+
+#%% Index the trials and blocks to see possible impact of time 
 trials=[[1]*25, [2]*25, [3]*25, [4]*25, [5]*24]
 trials = [item for sublist in trials for item in sublist]
 
@@ -92,10 +97,17 @@ dm2_AB = dm2_A << dm2_B # voluntary
 #     plt.tight_layout()
 #     plt.show()
 
+# =============================================================================
+# %% Preprocess
+# =============================================================================
 # Process the pupil data and plot
 dm1_AB_ = dm_involuntary(dm1_AB)
-dm2_AB_ = dm_voluntary(dm2_AB)
+plt.savefig(cwd+"figs/involuntary_mainplot.png", bbox_inches='tight')
+plt.show()
 
+dm2_AB_ = dm_voluntary(dm2_AB)
+plt.savefig(cwd+"figs/voluntary_mainplot.png", bbox_inches='tight')
+plt.show()
 # Check that the same participants have been excluded for both tasks
 print(dm2_AB_.participant.unique == dm1_AB_.participant.unique)
 
@@ -104,24 +116,11 @@ print(f'Mean duration of imagery phase: {round(dm2_AB_.trace_length_read.mean)} 
 print(f'Max = {round(dm2_AB_.trace_length_read.max)}; Min = {round(dm2_AB_.trace_length_read.min)} ms)')
 
 # =============================================================================
-# Statistical analyses
+#%% Statistical analyses
 # =============================================================================
-from scipy.stats.distributions import chi2
-def compare_models(model1, model2, ddf):
-    """Null hypothesis: The simpler model is true. 
-    Log-likelihood of the model 1 for H0 must be <= LLF of model 2."""
-    print(f'Log-likelihood of model 1 <= model 2: {model1.llf <= model2.llf}')
-    
-    ratio = (model1.llf - model2.llf)*-2
-    p = chi2.sf(ratio, ddf) # How many more DoF does M2 has as compared to M1?
-    if p >= .05:
-        print(f'The simpler model is the better one (LLF M1: {round(model1.llf,3)}, LLF M2: {round(model2.llf,3)}, ratio = {round(ratio,3)}, df = {ddf}, p = {round(p,4)})')
-    else:
-        print(f'The simpler model is not the better one (LLF M1: {round(model1.llf,3)}, LLF M2: {round(model2.llf,3)}, ratio = {round(ratio,3)}, df = {ddf}, p = {round(p,4)})')
-
 # Involuntary
 dm1_test = group_dm(dm1_AB_, by='condition') # does not really change the results to average by cond
-# but it helps with meeting the assumption checks
+    # but it helps with meeting the assumption checks
 
     # With the original 10 ms divisive method
 m0 = test_stats(dm1_test, formula='mean_pupil_ ~ condition', re_formula='1 + condition')
@@ -168,16 +167,16 @@ check_assumptions(md2) #OK
 compare_models(md1, md2, 2)
 
 # =============================================================================
-# Visualise the data as barplots
+#%% Visualise the data as barplots
 # =============================================================================
 dm1_AB_ = ops.sort(dm1_AB_, by=dm1_AB_.mean_pupil)
 dm_df1 = convert.to_pandas(dm1_AB_)
-plt.figure(figsize=(20,10))
+plt.figure(figsize=(25,10))
 ax1=plt.subplot(1,2,1)
 plot_bars(dm_df1, order=['light', 'dark', 'ctrl'], pal=[orange[1], blue[1], gray[2]])
-plt.xticks(ticks=[0, 1, 2], labels=['Light', 'Dark', 'Neutral'], color='black')
+plt.xticks(ticks=[0, 1, 2], labels=['Bright', 'Dark', 'Neutral'], color='black')
 ax2=plt.subplot(1,2,2)
-plot_bars(dm_df1, x='blocks', y='mean_pupil', hue='condition', hue_order=['light', 'dark', 'ctrl'], xlab='Experimental Block rank', pal=[orange[1], blue[1], gray[2]])
+plot_bars(dm_df1, x='blocks', y='mean_pupil', hue='condition', hue_order=['light', 'dark', 'ctrl'], xlab='Experimental Block rank', ylab=None, pal=[orange[1], blue[1], gray[2]])
 for ax in [ax1, ax2]:
     ax.spines['bottom'].set_visible(True)
     ax.spines['bottom'].set_color('black')
@@ -185,6 +184,7 @@ for ax in [ax1, ax2]:
     ax.spines['left'].set_color('black')
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
+plt.savefig(cwd+"figs/barplot1.png", bbox_inches='tight')
 plt.show()
 
 plt.figure(figsize=(30,10))
@@ -192,7 +192,7 @@ ax1=plt.subplot(1,3,1)
 dm2_AB_ = ops.sort(dm2_AB_, by=dm2_AB_.pupil_change)
 dm_df2 = convert.to_pandas(dm2_AB_)
 plot_bars(dm_df2, order=['light', 'dark'], pal=[orange[1], blue[1]])
-plt.xticks(ticks=[0, 1], labels=['Light', 'Dark'])
+plt.xticks(ticks=[0, 1], labels=['Bright', 'Dark'])
 ax2=plt.subplot(1,3,2)
 dm2_AB_ = ops.sort(dm2_AB_, by=dm2_AB_.pupil_change)
 dm_df2 = convert.to_pandas(dm2_AB_)
@@ -208,10 +208,12 @@ for ax in [ax1, ax2, ax3]:
     ax.spines['left'].set_color('black')
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
+plt.savefig(cwd+"figs/barplot2.png", bbox_inches='tight')
 plt.show()
 
 plt.figure(figsize=(10,10))
 plot_bars(dm_df2, y='trace_length_read', pal=[orange[1], blue[1]], order=['light', 'dark'], ylab='Mean reading time (ms)')
+plt.savefig(cwd+"figs/barplot3.png", bbox_inches='tight')
 plt.show()
 
 # Check negative scores rate (or positive)
@@ -227,7 +229,7 @@ print(f'Involuntary: {len(pos_invol)/N * 100}% ({len(pos_invol)}/{N})')
 print('Both:', len(both_pos)/N * 100)
 
 # =============================================================================
-# Process the questionnaire data
+#%% Process the questionnaire data
 # =============================================================================
 # Get questionnaires data
 df = pd.read_csv(cwd+questfile,sep=',')
@@ -296,10 +298,10 @@ df.Q00Aphant2.describe(include='all')
 df.Q00Aphant.describe(include='all')
 
 # Print their scores
-for a in list(df.Q00ID[df.Q00Aphant2=='Y']):
-    print(a, df.QMI_visual[df.Q00ID==a])
-for a in list(df.Q00ID[df.Q00Aphant2=='M']):
-    print(a, df.QMI_visual[df.Q00ID==a])
+aphants_maybeyes = list(df.Q00ID[df.Q00Aphant2!='N'])
+df_maybeyes = df[df["Q00ID"].isin(aphants_maybeyes)]
+df_maybeyes.QMI_visual.describe()
+df_maybeyes.vivid_invol.describe()
 
 # Add columns of interest to the datamatrix
 dm1_AB_.QMI_visual, dm1_AB_.freq_vol = '', ''
@@ -329,54 +331,61 @@ for p, sdm in ops.split(dm2_AB_.participant):
     dm2_AB_.aphant[sdm] = str(sub_df.Q00Aphant2.iloc[0])
     
 # =============================================================================
-# Visualise the individual effects per participant and per stimulus
+#%% Visualise the individual effects per participant and per stimulus
 # =============================================================================
-plt.rcParams['font.size'] = 40
+plt.rcParams['font.size'] = 45
 dm1_AB_ = ops.sort(dm1_AB_, by=dm1_AB_.pupil_change)
 dm_df1 = convert.to_pandas(dm1_AB_)
 
 dm2_AB_ = ops.sort(dm2_AB_, by=dm2_AB_.pupil_change)
 dm_df2 = convert.to_pandas(dm2_AB_)
+palette_aph = ['#4C4C4C', '#D62728', '#FF7F0E']  # muted but distinct
 
-fig = plt.figure(figsize=(20,13)) # 25 13
-ax1=plt.subplot(1,1,1)
-#plt.title('\n\n\nA) Involuntary\n', loc='left')
-sns.pointplot(data=dm_df1, x='participant', y='pupil_change', hue='aphant', hue_order=['N', 'Y', 'M'], scale=3.0, palette=['black', 'red', 'orange'])
-plt.xlabel('Participants', color='black');plt.ylabel('Pupil Size Mean Differences\n(Dark - Bright) (a.u)', color='black', fontsize=40)
+fig = plt.figure(figsize=(35,15)) # 25 13 if one figure
+ax1=plt.subplot(1,2,1) 
+plt.title('\n\n\nA. Involuntary task\n', loc='left', fontsize=50, fontweight='bold')
+sns.pointplot(data=dm_df1, x='participant', y='pupil_change', hue='aphant', hue_order=['N', 'Y', 'M'], scale=3.0, palette=palette_aph)
+plt.xlabel('\nParticipants', color='black', fontsize=45);plt.ylabel('Pupil Size Mean Differences\n(Dark - Bright) (a.u)', color='black', fontsize=40)
 handles, labels = ax1.get_legend_handles_labels()
 plt.legend('')
-fig.legend(handles, ['No', 'Yes', 'Maybe'], loc='upper center', title='Do you think this definition of aphantasia fits you?', ncol=3, frameon=False, fontsize=40)
+fig.legend(handles, ['No', 'Yes', 'Maybe'], loc='upper center', title='Do you think this definition of Aphantasia might apply to you?', ncol=3, frameon=False, fontsize=40)
 ax1.spines['bottom'].set_visible(True)
 ax1.spines['bottom'].set_color('black')
 ax1.spines['left'].set_visible(True)
 ax1.spines['left'].set_color('black')
 ax1.spines['top'].set_visible(False)
 ax1.spines['right'].set_visible(False)
-plt.xticks([]);plt.yticks(color='black')
+#plt.xticks([]);plt.yticks(color='black')
 plt.xlim([-1, 51])
 plt.axhline(0, color='black')
-plt.show()
+#plt.show()
 
-fig = plt.figure(figsize=(20,13))
-ax2=plt.subplot(1,1,1)
-#plt.title('\n\n\nB) Voluntary\n', loc='left')
-sns.pointplot(data=dm_df2, x='participant', y='pupil_change', hue='aphant', hue_order=['N', 'Y', 'M'], scale=3.0, palette=['black', 'red', 'orange'])
-plt.xlabel('Participants', color='black');plt.ylabel('Pupil Size Mean Differences\n(Dark - Bright) (a.u)', color='black', fontsize=40)
+#fig = plt.figure(figsize=(20,13))
+ax2=plt.subplot(1,2,2)
+plt.title('\n\n\nB. Voluntary task\n', loc='left', fontsize=50, fontweight='bold')
+sns.pointplot(data=dm_df2, x='participant', y='pupil_change', hue='aphant', hue_order=['N', 'Y', 'M'], scale=3.0, palette=palette_aph)
+plt.xlabel('\nParticipants', color='black', fontsize=45);plt.ylabel(' ', color='black', fontsize=40)
 ax2.spines['bottom'].set_visible(True)
 ax2.spines['bottom'].set_color('black')
 ax2.spines['left'].set_visible(True)
 ax2.spines['left'].set_color('black')
 ax2.spines['top'].set_visible(False)
 ax2.spines['right'].set_visible(False)
-plt.xticks([]);plt.yticks(color='black')
+#plt.xticks([], fontsize=40);plt.yticks(color='black')
 plt.legend('')
-fig.legend(handles, ['No', 'Yes', 'Maybe'], loc='upper center', title='Do you think this definition of aphantasia fits you?', ncol=3, frameon=False, fontsize=40)
+fig.legend(handles, ['No', 'Yes', 'Maybe'], loc='upper center', title='Do you think this definition of Aphantasia might apply to you?', ncol=3, frameon=False, fontsize=40)
 plt.tight_layout()
 plt.xlim([-1, 51])
 plt.axhline(0, color='black')
+ax1.tick_params(axis='y', labelsize=35)
+ax2.tick_params(axis='y', labelsize=35)
+ax1.tick_params(axis='x', labelsize=5)
+ax2.tick_params(axis='x', labelsize=5)
+plt.tight_layout(rect=[0, 0, 1, 1])  # Leaves space for the legend
+plt.savefig(cwd+"figs/pupil_change_plot.png", bbox_inches='tight')
 plt.show()
 
-# See pupil changes per word
+#%% See pupil changes per word
 df_codes = pd.read_csv(cwd+'edf_stim_codes.csv', sep=',')
 
 word_summary(dm1_AB_, 'invol', df_codes, 100, 150) # during the 1000 to 1500 ms period
@@ -403,7 +412,7 @@ plt.legend()
 plt.show()
 
 # =============================================================================
-# Test the correlations between subjective and objective measures
+#%% Test the correlations between subjective and objective measures
 # =============================================================================
 dm1_AB_.pupil_change_vol = NAN # add column to datamatrix 
 for p, sdm in ops.split(dm1_AB_.participant):
@@ -424,7 +433,7 @@ test_correlation(dm2_AB_, x='QMI_visual', y='rating', alt='less')
 test_correlation(dm1_AB_, x='pupil_change', y='pupil_change_vol', alt='greater')
 
 # =============================================================================
-# Assess the emotional intensity of the stimuli
+#%% Assess the emotional intensity of the stimuli
 # =============================================================================
 from vaderSentiment_fr.vaderSentiment import SentimentIntensityAnalyzer
 
