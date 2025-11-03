@@ -96,7 +96,7 @@ dm2_AB = dm2_A << dm2_B # voluntary
 #     check_blinks(dm, False, time=t[1])
 #     plt.tight_layout()
 #     plt.show()
-
+    
 # =============================================================================
 # %% Preprocess
 # =============================================================================
@@ -390,26 +390,6 @@ df_codes = pd.read_csv(cwd+'edf_stim_codes.csv', sep=',')
 
 word_summary(dm1_AB_, 'invol', df_codes, 100, 150) # during the 1000 to 1500 ms period
 word_summary(dm2_AB_, 'vol', df_codes, 400, 1100) # during the whole 7-s imagery period
-
-# Plot relationship between objective and subjective measures
-plt.figure(figsize=(10,10))
-plt.rcParams['font.size'] = 35
-ax1=plt.subplot(1,1,1)
-sns.regplot(x=dm_df1.vivid_invol, y=dm_df1.pupil_change, label='Involuntary', lowess=True, color='red')
-sns.regplot(x=dm_df1.vivid_invol, y=dm_df1.pupil_change, lowess=False, color='red', ci=95)
-
-sns.regplot(x=dm_df2.QMI_visual, y=dm_df2.pupil_change, label='Voluntary', lowess=True, color='blue')
-sns.regplot(x=dm_df2.QMI_visual, y=dm_df2.pupil_change, lowess=False, color='blue')
-
-ax1.spines['bottom'].set_visible(True)
-ax1.spines['bottom'].set_color('black')
-ax1.spines['left'].set_visible(True)
-ax1.spines['left'].set_color('black')
-ax1.spines['top'].set_visible(False)
-ax1.spines['right'].set_visible(False)
-plt.xlabel('Subjective Vividness ratings');plt.ylabel('Pupil Size Mean Differences (a.u.)', fontsize=35)
-plt.legend()
-plt.show()
 
 # =============================================================================
 #%% Test the correlations between subjective and objective measures
