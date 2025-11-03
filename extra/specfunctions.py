@@ -25,6 +25,7 @@ import datamatrix
 import statsmodels.api as sm
 import scipy.stats as stats
 from statsmodels.stats.diagnostic import het_white
+from scipy.stats.distributions import chi2
 
 # =============================================================================
 # Create useful functions
@@ -41,7 +42,7 @@ def get_data(cwd, folder, split=True):
             ),
         gaze_pos=False,  # Don't store gaze-position information to save memory
         time_trace=False, # Don't store absolute timestamps to save memory
-        folder=cwd+folder,
+        folder=cwd+folder, 
         multiprocess=16)
     
     # To save memory, we keep only a subset of relevant columns.
@@ -136,19 +137,21 @@ def preprocess(dm):
     
     print('Number of trials removed:', before-after, ((before-after)/before) * 100, '%')
     
-    # How many trials left per participant?
+    # How many trials left per participant, per condition?
     dm_.nbtrials = ''
     for participant, cond, sdm in ops.split(dm_.participant, dm_.condition):
         dm_.nbtrials[sdm] = len(sdm[sdm.condition==cond])
     
+    print(dm_.nbtrials.unique)
+    
     if len(dm_.blocks.unique) > 1: # if involuntary task
-        too_few_trials = dm_.participant[dm_.nbtrials < 5]
+        too_few_trials = dm_.participant[dm_.nbtrials < 18] # exclude those who have less than around 50% of trials left per condition
     else: # if voluntary task
-        too_few_trials = dm_.participant[dm_.nbtrials < 2]
+        too_few_trials = dm_.participant[dm_.nbtrials < 3]  # exclude those who have less than around 50% of trials left per condition
     
     dm_ = dm_.participant != set(too_few_trials)
     print(f'{len(dm.participant.unique) - len(dm_.participant.unique)} participants removed.')
-    
+    print(dm_.nbtrials.unique)
     return dm_
 
 def count_nonnan(a):
@@ -411,7 +414,7 @@ def dm_involuntary(dm, exp='invol'):
     # baseline corrected
     fig, axes = plt.subplots(1, 2, figsize=(25, 12), sharex=True)
     ax0=plt.subplot(1,2,1)
-    plt.title('A\n', loc='left')
+    plt.title('A. Divisive\n', loc='left', fontweight='bold', fontsize=35)
     plot.trace(dm_dark.pupil_imagery_, color=blue[1], label='Dark (N=%d)' % len(dm_dark))
     plot.trace(dm_light.pupil_imagery_, color=orange[1], label='Bright (N=%d)' % len(dm_light))
     plot.trace(dm_ctrl.pupil_imagery_, color=gray[3], label='Neutral (N=%d)' % len(dm_ctrl))
@@ -430,7 +433,7 @@ def dm_involuntary(dm, exp='invol'):
     plt.axvline(140, color=gray[1])
     
     ax1=plt.subplot(1,2,2)
-    plt.title('B\n', loc='left')
+    plt.title('B. Subtractive\n', loc='left', fontweight='bold', fontsize=35)
     dm_dark, dm_light, dm_ctrl = ops.split(dm1.condition, 'dark', 'light', 'ctrl')
     plot.trace(dm_dark.pupil_imagery, color=blue[1], label='Dark (N=%d)' % len(dm_dark))
     plot.trace(dm_light.pupil_imagery, color=orange[1], label='Bright (N=%d)' % len(dm_light))
@@ -445,14 +448,14 @@ def dm_involuntary(dm, exp='invol'):
     ax1.spines['top'].set_visible(False)
     ax1.spines['right'].set_visible(False)
     handles, labels = ax1.get_legend_handles_labels()
-    legend = fig.legend(handles, labels, ncol=4, bbox_to_anchor=(0.99, -0.03), frameon=False, fontsize=40)
-    for legobj in legend.legendHandles:
+    legend = fig.legend(handles, labels, ncol=4, bbox_to_anchor=(0.95, 0), frameon=False, fontsize=35)
+    for legobj in legend.legend_handles:
         legobj.set_linewidth(4)
     plt.tight_layout()
-    plt.axvline(90, color=gray[1])
+    plt.axvline(100, color=gray[1])
     plt.axvline(150, color=gray[1])
     plt.xlim([0,300])
-    plt.show()
+    #plt.show()
     
     
     return dm1
@@ -581,65 +584,7 @@ def dm_voluntary(dm, exp='vol'):
     plt.tight_layout()
     plt.show()
     
-    # After baseline correction [1]
-    fig = plt.figure(figsize=(25,20))
-    dm_dark, dm_light = ops.split(dm1.condition, 'dark', 'light')
-    ax1=plt.subplot(2,2,1)
-    plt.title('Reading')
-    plot.trace(dm_dark.pupil_imagery[:, 100:400], color=blue[1], label='Dark (N=%d)' % len(dm_dark))
-    plot.trace(dm_light.pupil_imagery[:, 100:400], color=orange[1], label='Bright (N=%d)' % len(dm_light))
-    ax1.spines['bottom'].set_visible(True)
-    ax1.spines['bottom'].set_color('black')
-    ax1.spines['left'].set_visible(True)
-    ax1.spines['left'].set_color('black')
-    ax1.spines['top'].set_visible(False)
-    ax1.spines['right'].set_visible(False)
-    #plt.legend(ncol=1, loc='lower left')
-    plt.xticks(range(0, 400, 100), range(-3, 1, 1), color='black');plt.yticks(color='black')
-    plt.xlabel('Time Since Start Imagine (s)', color='black')#plt.ylabel('Baseline-corrected Pupil Size (a.u.)', color='black')
-    plt.xlim([0,300])
-
-    ax2=plt.subplot(2,2,2)
-    plt.title('Imagining')
-    plot.trace(dm_dark.pupil_imagery[:, 400:], color=blue[1], label='Dark (N=%d)' % len(dm_dark))
-    plot.trace(dm_light.pupil_imagery[:, 400:], color=orange[1], label='Bright (N=%d)' % len(dm_light))
-    ax2.spines['bottom'].set_visible(True)
-    ax2.spines['bottom'].set_color('black')
-    ax2.spines['left'].set_visible(True)
-    ax2.spines['left'].set_color('black')
-    ax2.spines['top'].set_visible(False)
-    ax2.spines['right'].set_visible(False)
-    #plt.legend(ncol=1, loc='lower left')
-    plt.xticks(range(0, 800, 100), range(0, 8, 1), color='black');plt.yticks(color='black')
-    plt.xlabel('Time Since Start Imagine (s)', color='black')#;plt.ylabel('Baseline-corrected Pupil Size (a.u.)', color='black')
-    plt.xlim([0,700])
-
-    ax3=plt.subplot(2,1,2)
-    plt.title('Full trial')
-    plot.trace(dm_dark.pupil_imagery, color=blue[1], label='Dark (N=%d)' % len(dm_dark))
-    plot.trace(dm_light.pupil_imagery, color=orange[1], label='Bright (N=%d)' % len(dm_light))
-    plt.axvline(100, linestyle='solid', color='black')
-    plt.axvline(400, linestyle='solid', color='black')
-    ax3.spines['bottom'].set_visible(True)
-    ax3.spines['bottom'].set_color('black')
-    ax3.spines['left'].set_visible(True)
-    ax3.spines['left'].set_color('black')
-    ax3.spines['top'].set_visible(False)
-    ax3.spines['right'].set_visible(False)
-    #plt.legend(ncol=1, loc='upper right')
-    plt.xticks(range(0, 1200, 100), range(-4, 8, 1), color='black');plt.yticks(color='black')
-    plt.xlabel('Time Since Start Imagine (s)', color='black')
-    plt.xlim([0,1100])
-    handles, labels = ax1.get_legend_handles_labels()
-    legend = fig.legend(handles, labels, ncol=4, bbox_to_anchor=(0.825, -0.03), frameon=False, fontsize=50)
-    for legobj in legend.legendHandles:
-        legobj.set_linewidth(4)
-    axes = [ax1, ax2, ax3]
-    fig.supylabel('Baseline-corrected Pupil Size (a.u.)', color='black', ha='center', va='center', fontsize=55)
-    plt.tight_layout()
-    plt.show()
-    
-    # After baseline correction [2]
+    # After baseline correction [alt]
     plt.figure(figsize=(25,20))
     plt.suptitle('With the whole 1-s fixation period as baseline')
     dm_dark, dm_light = ops.split(dm1.condition, 'dark', 'light')
@@ -692,6 +637,64 @@ def dm_voluntary(dm, exp='vol'):
     axes = [ax1, ax2, ax3]
     plt.tight_layout()
     plt.show()
+    
+    # After baseline correction [recommended]
+    fig = plt.figure(figsize=(25,20))
+    dm_dark, dm_light = ops.split(dm1.condition, 'dark', 'light')
+    ax1=plt.subplot(2,2,1)
+    plt.title('Reading', fontweight='bold')
+    plot.trace(dm_dark.pupil_imagery[:, 100:400], color=blue[1], label='Dark (N=%d)' % len(dm_dark))
+    plot.trace(dm_light.pupil_imagery[:, 100:400], color=orange[1], label='Bright (N=%d)' % len(dm_light))
+    ax1.spines['bottom'].set_visible(True)
+    ax1.spines['bottom'].set_color('black')
+    ax1.spines['left'].set_visible(True)
+    ax1.spines['left'].set_color('black')
+    ax1.spines['top'].set_visible(False)
+    ax1.spines['right'].set_visible(False)
+    #plt.legend(ncol=1, loc='lower left')
+    plt.xticks(range(0, 400, 100), range(-3, 1, 1), color='black');plt.yticks(color='black')
+    plt.xlabel('Time Since Start Imagine (s)', color='black')#plt.ylabel('Baseline-corrected Pupil Size (a.u.)', color='black')
+    plt.xlim([0,300])
+
+    ax2=plt.subplot(2,2,2)
+    plt.title('Imagining', fontweight='bold')
+    plot.trace(dm_dark.pupil_imagery[:, 400:], color=blue[1], label='Dark (N=%d)' % len(dm_dark))
+    plot.trace(dm_light.pupil_imagery[:, 400:], color=orange[1], label='Bright (N=%d)' % len(dm_light))
+    ax2.spines['bottom'].set_visible(True)
+    ax2.spines['bottom'].set_color('black')
+    ax2.spines['left'].set_visible(True)
+    ax2.spines['left'].set_color('black')
+    ax2.spines['top'].set_visible(False)
+    ax2.spines['right'].set_visible(False)
+    #plt.legend(ncol=1, loc='lower left')
+    plt.xticks(range(0, 800, 100), range(0, 8, 1), color='black');plt.yticks(color='black')
+    plt.xlabel('Time Since Start Imagine (s)', color='black')#;plt.ylabel('Baseline-corrected Pupil Size (a.u.)', color='black')
+    plt.xlim([0,700])
+
+    ax3=plt.subplot(2,1,2)
+    plt.title('Full trial', fontweight='bold')
+    plot.trace(dm_dark.pupil_imagery, color=blue[1], label='Dark (N=%d)' % len(dm_dark))
+    plot.trace(dm_light.pupil_imagery, color=orange[1], label='Bright (N=%d)' % len(dm_light))
+    plt.axvline(100, linestyle='solid', color='black')
+    plt.axvline(400, linestyle='solid', color='black')
+    ax3.spines['bottom'].set_visible(True)
+    ax3.spines['bottom'].set_color('black')
+    ax3.spines['left'].set_visible(True)
+    ax3.spines['left'].set_color('black')
+    ax3.spines['top'].set_visible(False)
+    ax3.spines['right'].set_visible(False)
+    #plt.legend(ncol=1, loc='upper right')
+    plt.xticks(range(0, 1200, 100), range(-4, 8, 1), color='black');plt.yticks(color='black')
+    plt.xlabel('Time Since Start Imagine (s)', color='black')
+    plt.xlim([0,1100])
+    handles, labels = ax1.get_legend_handles_labels()
+    legend = fig.legend(handles, labels, ncol=4, bbox_to_anchor=(0.77, 0), frameon=False, fontsize=40)
+    for legobj in legend.legend_handles:
+        legobj.set_linewidth(4)
+    axes = [ax1, ax2, ax3]
+    fig.supylabel('Baseline-corrected Pupil Size (a.u.)', color='black', ha='center', va='center', fontsize=55)
+    plt.tight_layout()
+    #plt.show()
     
     return dm1
 
@@ -851,10 +854,10 @@ def word_summary(dm, EXP, df, low, high):
     
     sm = operations.sort(sm, sm.pupil_win)
     if EXP=='invol':
-        plot.new(size=(20,7))
+        plot.new(size=(22,10))
         s=20
     else:
-        plot.new(size=(15,7))
+        plot.new(size=(20,10))
         s=30
     
     i=0
@@ -1006,4 +1009,16 @@ def check_assumptions(model):
     
     warnings.filterwarnings("default", category=FutureWarning)
     warnings.filterwarnings("default", category=UserWarning)
+
+def compare_models(model1, model2, ddf):
+    """Null hypothesis: The simpler model is true. 
+    Log-likelihood of the model 1 for H0 must be <= LLF of model 2."""
+    print(f'Log-likelihood of model 1 <= model 2: {model1.llf <= model2.llf}')
+    
+    ratio = (model1.llf - model2.llf)*-2
+    p = chi2.sf(ratio, ddf) # How many more DoF does M2 has as compared to M1?
+    if p >= .05:
+        print(f'The simpler model is the better one (LLF M1: {round(model1.llf,3)}, LLF M2: {round(model2.llf,3)}, ratio = {round(ratio,3)}, df = {ddf}, p = {round(p,4)})')
+    else:
+        print(f'The simpler model is not the better one (LLF M1: {round(model1.llf,3)}, LLF M2: {round(model2.llf,3)}, ratio = {round(ratio,3)}, df = {ddf}, p = {round(p,4)})')
 
